@@ -1,11 +1,12 @@
 pub fn take_while(pred: impl Fn(char) -> bool, input: &str) -> (&str, &str) {
-    let mut chars = input.chars();
+    let mut char_indices = input.char_indices();
     let mut i = 0;
-    while let Some(c) = chars.next() {
+    while let Some((ci, c)) = char_indices.next() {
+        i = ci;
         if !pred(c) {
             break;
         }
-        i += 1;
+        i += 1
     }
     (&input[..i], &input[i..])
 }
@@ -20,7 +21,8 @@ pub fn take_while1(pred: impl Fn(char) -> bool, input: &str) -> Option<(&str, &s
 }
 
 pub fn take(length: usize, input: &str) -> Option<(&str, &str)> {
-    Some((input.get(0..length)?, &input[length..]))
+    let (ci, _) = input.char_indices().nth(length)?;
+    Some((&input[..ci], &input[ci..]))
 }
 
 pub fn fixed<'a>(s: &str, input: &'a str) -> Option<(&'a str, &'a str)> {
@@ -38,6 +40,10 @@ pub fn unsigned_number(input: &str) -> Option<(u32, &str)> {
     Some((num, input))
 }
 
+// pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Option<(&str, &str)> {
+//     todo!();
+// }
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -47,6 +53,13 @@ mod test {
         let input = "1234abc";
         let res = take_while(|c| c.is_ascii_digit(), input);
         assert_eq!(res, ("1234", "abc"));
+    }
+
+    #[test]
+    fn take_while_full_match() {
+        let input = "1234";
+        let res = take_while(|c| c.is_ascii_digit(), input);
+        assert_eq!(res, ("1234", ""));
     }
 
     #[test]
@@ -111,4 +124,18 @@ mod test {
         let res = unsigned_number(input);
         assert!(res.is_none());
     }
+
+    // #[test]
+    // fn test_match_n_matches() {
+    //     let input = "1234abc";
+    //     let res = match_n(|c| c.is_ascii_digit(), 2, input);
+    //     assert_eq!(res, Some(("12", "34abc")));
+    // }
+
+    // #[test]
+    // fn test_match_n_no_match() {
+    //     let input = "abc1234";
+    //     let res = match_n(|c| c.is_ascii_digit(), 2, input);
+    //     assert!(res.is_none());
+    // }
 }
