@@ -21,14 +21,15 @@ pub fn take_while1(pred: impl Fn(char) -> bool, input: &str) -> Option<(&str, &s
 }
 
 pub fn take(length: usize, input: &str) -> Option<(&str, &str)> {
-    let (ci, _) = input.char_indices().nth(length)?;
+    let mut char_ind_iter = input.char_indices();
+    let (ci, _) = char_ind_iter.nth(length - 1)?;
+    let ci = char_ind_iter.next().map(|(ci, _)| ci).unwrap_or(ci + 1);
     Some((&input[..ci], &input[ci..]))
 }
 
 pub fn fixed<'a>(s: &str, input: &'a str) -> Option<(&'a str, &'a str)> {
-    let (part, input) = take(s.len(), input)?;
-    if part == s {
-        Some((part, input))
+    if input.starts_with(s) {
+        Some((&input[..s.len()], &input[s.len()..]))
     } else {
         None
     }
@@ -40,9 +41,25 @@ pub fn unsigned_number(input: &str) -> Option<(u32, &str)> {
     Some((num, input))
 }
 
-// pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Option<(&str, &str)> {
-//     todo!();
-// }
+pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Option<(&str, &str)> {
+    let (part, input) = take(length, input)?;
+    if part.chars().all(pred) {
+        Some((part, input))
+    } else {
+        None
+    }
+}
+
+pub fn optional(
+    parser: impl Fn(&str) -> Option<(&str, &str)>,
+    input: &str,
+) -> (Option<&str>, &str) {
+    if let Some((res, rem_input)) = parser(input) {
+        (Some(res), rem_input)
+    } else {
+        (None, input)
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -98,6 +115,13 @@ mod test {
     }
 
     #[test]
+    fn take_complete() {
+        let input = "1234";
+        let res = take(4, input);
+        assert_eq!(res, Some(("1234", "")));
+    }
+
+    #[test]
     fn fixed_matches() {
         let input = "1234abc";
         let res = fixed("1234", input);
@@ -125,17 +149,46 @@ mod test {
         assert!(res.is_none());
     }
 
-    // #[test]
-    // fn test_match_n_matches() {
-    //     let input = "1234abc";
-    //     let res = match_n(|c| c.is_ascii_digit(), 2, input);
-    //     assert_eq!(res, Some(("12", "34abc")));
-    // }
+    #[test]
+    fn match_n_matches() {
+        let input = "1234abc";
+        let res = match_n(|c| c.is_ascii_digit(), 2, input);
+        assert_eq!(res, Some(("12", "34abc")));
+    }
 
-    // #[test]
-    // fn test_match_n_no_match() {
-    //     let input = "abc1234";
-    //     let res = match_n(|c| c.is_ascii_digit(), 2, input);
-    //     assert!(res.is_none());
-    // }
+    #[test]
+    fn match_n_no_match() {
+        let input = "abc1234";
+        let res = match_n(|c| c.is_ascii_digit(), 2, input);
+        assert!(res.is_none());
+    }
+
+    #[test]
+    fn test_match_n_beyond_range() {
+        let input = "12";
+        let res = match_n(|c| c.is_ascii_digit(), 3, input);
+        assert!(res.is_none());
+    }
+
+    fn two_space(input: &str) -> Option<(&str, &str)> {
+        if input.starts_with("  ") {
+            Some((&input[..2], &input[2..]))
+        } else {
+            None
+        }
+    }
+
+    #[test]
+    fn test_optional_matches() {
+        let input = "  abc";
+        let res = optional(two_space, input);
+        assert_eq!(res, (Some("  "), "abc"));
+    }
+
+    #[test]
+    fn test_optional_no_match() {
+        let input = " abc";
+        let res = optional(two_space, input);
+        assert_eq!(res, (None, " abc"));
+    }
 }
