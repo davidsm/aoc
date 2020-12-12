@@ -61,6 +61,10 @@ pub fn optional(
     }
 }
 
+pub fn endline(input: &str) -> Option<(&str, &str)> {
+    match_n(|c| c == '\n', 1, input)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -164,7 +168,7 @@ mod test {
     }
 
     #[test]
-    fn test_match_n_beyond_range() {
+    fn match_n_beyond_range() {
         let input = "12";
         let res = match_n(|c| c.is_ascii_digit(), 3, input);
         assert!(res.is_none());
@@ -179,16 +183,23 @@ mod test {
     }
 
     #[test]
-    fn test_optional_matches() {
+    fn optional_matches() {
         let input = "  abc";
         let res = optional(two_space, input);
         assert_eq!(res, (Some("  "), "abc"));
     }
 
     #[test]
-    fn test_optional_no_match() {
+    fn optional_no_match() {
         let input = " abc";
         let res = optional(two_space, input);
         assert_eq!(res, (None, " abc"));
+    }
+
+    #[test]
+    fn endline_match() {
+        let input = "\nabc";
+        let res = endline(input);
+        assert_eq!(res, Some(("\n", "abc")));
     }
 }
