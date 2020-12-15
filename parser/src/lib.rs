@@ -1,3 +1,18 @@
+// Stolen from Nom, more or less
+// TODO: Figure out how to make this with &str instead of generic I...
+pub trait Parser<O, I> {
+    fn parse(&self, input: I) -> Option<(O, I)>;
+}
+
+impl<'a, I, O, F> Parser<O, I> for F
+where
+    F: Fn(I) -> Option<(O, I)> + 'a,
+{
+    fn parse(&self, i: I) -> Option<(O, I)> {
+        self(i)
+    }
+}
+
 pub fn take_while(pred: impl Fn(char) -> bool, input: &str) -> (&str, &str) {
     let mut char_indices = input.char_indices();
     let mut i = 0;
@@ -50,14 +65,25 @@ pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Optio
     }
 }
 
-pub fn optional(
-    parser: impl Fn(&str) -> Option<(&str, &str)>,
-    input: &str,
-) -> (Option<&str>, &str) {
-    if let Some((res, rem_input)) = parser(input) {
-        (Some(res), rem_input)
+pub fn optional<'a, O>(parser: impl Parser<O, &'a str>, input: &'a str) -> (Option<O>, &'a str) {
+    if let Some((res, rest)) = parser.parse(input) {
+        (Some(res), rest)
     } else {
         (None, input)
+    }
+}
+
+pub fn many1<'a, O>(parser: impl Parser<O, &'a str>, mut input: &'a str) -> Option<(Vec<O>, &str)> {
+    let mut collected = Vec::new();
+    while let Some((res, rest)) = parser.parse(input) {
+        collected.push(res);
+        input = rest;
+    }
+
+    if !collected.is_empty() {
+        Some((collected, input))
+    } else {
+        None
     }
 }
 
@@ -194,6 +220,21 @@ mod test {
         let input = " abc";
         let res = optional(two_space, input);
         assert_eq!(res, (None, " abc"));
+    }
+
+    #[test]
+    fn match1_matches() {
+        let input = "    abc";
+        let res = many1(two_space, input);
+        let expected = vec!["  ", "  "];
+        assert_eq!(res, Some((expected, "abc")));
+    }
+
+    #[test]
+    fn match1_no_match() {
+        let input = "abc";
+        let res = many1(two_space, input);
+        assert!(res.is_none());
     }
 
     #[test]
