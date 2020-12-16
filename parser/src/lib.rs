@@ -14,9 +14,8 @@ where
 }
 
 pub fn take_while(pred: impl Fn(char) -> bool, input: &str) -> (&str, &str) {
-    let mut char_indices = input.char_indices();
     let mut i = 0;
-    while let Some((ci, c)) = char_indices.next() {
+    for (ci, c) in input.char_indices() {
         i = ci;
         if !pred(c) {
             break;
@@ -43,8 +42,8 @@ pub fn take(length: usize, input: &str) -> Option<(&str, &str)> {
 }
 
 pub fn fixed<'a>(s: &str, input: &'a str) -> Option<(&'a str, &'a str)> {
-    if input.starts_with(s) {
-        Some((&input[..s.len()], &input[s.len()..]))
+    if let Some(rest) = input.strip_prefix(s) {
+        Some((&input[..s.len()], rest))
     } else {
         None
     }
