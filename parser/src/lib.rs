@@ -64,6 +64,28 @@ pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Optio
     }
 }
 
+pub fn endline(input: &str) -> Option<(&str, &str)> {
+    match_n(|c| c == '\n', 1, input)
+}
+
+pub fn words(number: usize, input: &str) -> Option<(&str, &str)> {
+    assert!(number > 0);
+    let mut rest = input;
+    let mut pos_words_end = 0;
+    for _ in 0..(number - 1) {
+        let pos_word_end = rest.find(' ')?;
+        if pos_word_end == input.len() - 1 {
+            return None;
+        }
+        let start_next_word = pos_word_end + 1;
+        rest = &rest[start_next_word..];
+        pos_words_end += start_next_word;
+    }
+    let pos_word_end = rest.find(' ').unwrap_or_else(|| rest.len());
+    pos_words_end += pos_word_end;
+    Some((&input[..pos_words_end], &input[pos_words_end..]))
+}
+
 pub fn optional<'a, O>(parser: impl Parser<O, &'a str>, input: &'a str) -> (Option<O>, &'a str) {
     if let Some((res, rest)) = parser.parse(input) {
         (Some(res), rest)
@@ -84,10 +106,6 @@ pub fn many1<'a, O>(parser: impl Parser<O, &'a str>, mut input: &'a str) -> Opti
     } else {
         None
     }
-}
-
-pub fn endline(input: &str) -> Option<(&str, &str)> {
-    match_n(|c| c == '\n', 1, input)
 }
 
 #[cfg(test)]
@@ -241,5 +259,36 @@ mod test {
         let input = "\nabc";
         let res = endline(input);
         assert_eq!(res, Some(("\n", "abc")));
+    }
+
+    #[test]
+    fn words_one() {
+        let input = "dark green sky";
+        let res = words(1, input);
+        assert_eq!(res, Some(("dark", " green sky")));
+    }
+
+    #[test]
+    fn words_two() {
+        let input = "dark green sky";
+        let res = words(2, input);
+        assert_eq!(res, Some(("dark green", " sky")));
+    }
+
+    #[test]
+    fn words_incomplete() {
+        let input = "dark";
+        let res = words(2, input);
+        assert!(res.is_none());
+    }
+
+    #[test]
+    fn words_complete() {
+        let input = "dark";
+        let res = words(1, input);
+        assert_eq!(res, Some(("dark", "")));
+        let input = "dark green";
+        let res = words(2, input);
+        assert_eq!(res, Some(("dark green", "")));
     }
 }
