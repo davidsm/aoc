@@ -55,6 +55,20 @@ pub fn unsigned_number(input: &str) -> Option<(u32, &str)> {
     Some((num, input))
 }
 
+pub fn signed_number(input: &str) -> Option<(i32, &str)> {
+    let parser = |inp| {
+        let (_, inp) = optional(
+            |inp_| either(|i| fixed("+", i), |i| fixed("-", i), inp_),
+            inp,
+        );
+        let (_, inp) = unsigned_number(inp)?;
+        Some(((), inp))
+    };
+    let (num_str, input) = recognize(parser, input)?;
+    let num = num_str.parse::<i32>().ok()?;
+    Some((num, input))
+}
+
 pub fn match_n(pred: impl Fn(char) -> bool, length: usize, input: &str) -> Option<(&str, &str)> {
     let (part, input) = take(length, input)?;
     if part.chars().all(pred) {
@@ -106,6 +120,23 @@ pub fn many1<'a, O>(parser: impl Parser<O, &'a str>, mut input: &'a str) -> Opti
     } else {
         None
     }
+}
+
+pub fn either<'a, O>(
+    parser1: impl Parser<O, &'a str>,
+    parser2: impl Parser<O, &'a str>,
+    input: &'a str,
+) -> Option<(O, &str)> {
+    parser1.parse(input).or_else(|| parser2.parse(input))
+}
+
+pub fn recognize<'a, O>(parser: impl Parser<O, &'a str>, input: &'a str) -> Option<(&str, &str)> {
+    let (_, rest) = parser.parse(input)?;
+    // Feels a little weird, but stolen from Nom, so probably fine, maybe
+    let input_ptr = input.as_ptr();
+    let rest_ptr = rest.as_ptr();
+    let offset = rest_ptr as usize - input_ptr as usize;
+    Some((&input[..offset], rest))
 }
 
 #[cfg(test)]
@@ -193,6 +224,34 @@ mod test {
     fn unsigned_number_no_match() {
         let input = "abc1234";
         let res = unsigned_number(input);
+        assert!(res.is_none());
+    }
+
+    #[test]
+    fn signed_number_matches_positive() {
+        let input = "+10";
+        let res = signed_number(input);
+        assert_eq!(res, Some((10, "")));
+    }
+
+    #[test]
+    fn signed_number_matches_negative() {
+        let input = "-9";
+        let res = signed_number(input);
+        assert_eq!(res, Some((-9, "")));
+    }
+
+    #[test]
+    fn signed_number_matches_no_sign() {
+        let input = "10";
+        let res = signed_number(input);
+        assert_eq!(res, Some((10, "")));
+    }
+
+    #[test]
+    fn signed_number_no_match() {
+        let input = "a10";
+        let res = signed_number(input);
         assert!(res.is_none());
     }
 
@@ -290,5 +349,42 @@ mod test {
         let input = "dark green";
         let res = words(2, input);
         assert_eq!(res, Some(("dark green", "")));
+    }
+
+    #[test]
+    fn recognize_match() {
+        let parser = |inp| {
+            let (_, inp) = fixed("#", inp)?;
+            let (_, inp) = take_while1(|c| c.is_ascii_digit(), inp)?;
+            Some(((), inp))
+        };
+        let input = "#1234abc";
+
+        let res = recognize(parser, input);
+        assert_eq!(res, Some(("#1234", "abc")));
+    }
+
+    #[test]
+    fn either_one_matches() {
+        let p1 = |inp| fixed("A", inp);
+        let p2 = |inp| fixed("a", inp);
+        let input = "abcd";
+        let res = either(p1, p2, input);
+        assert_eq!(res, Some(("a", "bcd")));
+        let res = either(p2, p1, input);
+        assert_eq!(res, Some(("a", "bcd")));
+
+        let input = "Abcd";
+        let res = either(p1, p2, input);
+        assert_eq!(res, Some(("A", "bcd")));
+    }
+
+    #[test]
+    fn either_no_match() {
+        let p1 = |inp| fixed("A", inp);
+        let p2 = |inp| fixed("a", inp);
+        let input = "bcd";
+        let res = either(p1, p2, input);
+        assert!(res.is_none());
     }
 }
