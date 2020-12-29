@@ -2,13 +2,13 @@ use parser::{endline, fixed, many1, optional, signed_number, take_while1};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum Op {
-    Nop(i32),
-    Jmp(i32),
-    Acc(i32),
+    Nop(i64),
+    Jmp(i64),
+    Acc(i64),
 }
 
 struct BootCode {
-    accumulator: i32,
+    accumulator: i64,
     ip: usize,
     instructions: Vec<Op>,
     visited: Vec<bool>,
@@ -29,7 +29,7 @@ impl BootCode {
         let current_ip = self.ip;
         match self.instructions[current_ip] {
             Op::Nop(_) => self.ip += 1,
-            Op::Jmp(amt) => self.ip = ((self.ip as i32) + amt) as usize,
+            Op::Jmp(amt) => self.ip = ((self.ip as i64) + amt) as usize,
             Op::Acc(amt) => {
                 self.accumulator += amt;
                 self.ip += 1
@@ -84,7 +84,7 @@ impl BootCode {
         }
     }
 
-    fn accumulator(&self) -> i32 {
+    fn accumulator(&self) -> i64 {
         self.accumulator
     }
 }
@@ -198,7 +198,7 @@ mod test {
         BootCode::load(instructions)
     }
 
-    fn assert_machine(machine: &BootCode, exp_ip: usize, exp_acc: i32) {
+    fn assert_machine(machine: &BootCode, exp_ip: usize, exp_acc: i64) {
         assert_eq!(machine.ip, exp_ip, "Unexpected IP");
         assert_eq!(machine.accumulator(), exp_acc, "Unexpected accumulator");
     }

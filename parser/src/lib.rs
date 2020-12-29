@@ -49,13 +49,13 @@ pub fn fixed<'a>(s: &str, input: &'a str) -> Option<(&'a str, &'a str)> {
     }
 }
 
-pub fn unsigned_number(input: &str) -> Option<(u32, &str)> {
+pub fn unsigned_number(input: &str) -> Option<(u64, &str)> {
     let (num_str, input) = take_while(|c| c.is_ascii_digit(), input);
-    let num = num_str.parse::<u32>().ok()?;
+    let num = num_str.parse::<u64>().ok()?;
     Some((num, input))
 }
 
-pub fn signed_number(input: &str) -> Option<(i32, &str)> {
+pub fn signed_number(input: &str) -> Option<(i64, &str)> {
     let parser = |inp| {
         let (_, inp) = optional(
             |inp_| either(|i| fixed("+", i), |i| fixed("-", i), inp_),
@@ -65,7 +65,7 @@ pub fn signed_number(input: &str) -> Option<(i32, &str)> {
         Some(((), inp))
     };
     let (num_str, input) = recognize(parser, input)?;
-    let num = num_str.parse::<i32>().ok()?;
+    let num = num_str.parse::<i64>().ok()?;
     Some((num, input))
 }
 
@@ -137,6 +137,23 @@ pub fn recognize<'a, O>(parser: impl Parser<O, &'a str>, input: &'a str) -> Opti
     let rest_ptr = rest.as_ptr();
     let offset = rest_ptr as usize - input_ptr as usize;
     Some((&input[..offset], rest))
+}
+
+fn eof(input: &str) -> Option<(&str, &str)> {
+    if input.is_empty() {
+        Some(("", input))
+    } else {
+        None
+    }
+}
+
+pub fn endline_terminated<'a, O>(
+    parser: impl Parser<O, &'a str>,
+    input: &'a str,
+) -> Option<(O, &str)> {
+    let (res, input) = parser.parse(input)?;
+    let (_, input) = either(endline, eof, input)?;
+    Some((res, input))
 }
 
 #[cfg(test)]
@@ -386,5 +403,19 @@ mod test {
         let input = "bcd";
         let res = either(p1, p2, input);
         assert!(res.is_none());
+    }
+
+    #[test]
+    fn endline_terminated_endline() {
+        let input = "abc\ndef";
+        let res = endline_terminated(|inp| fixed("abc", inp), input);
+        assert_eq!(res, Some(("abc", "def")));
+    }
+
+    #[test]
+    fn endline_terminated_eof() {
+        let input = "abc";
+        let res = endline_terminated(|inp| fixed("abc", inp), input);
+        assert_eq!(res, Some(("abc", "")));
     }
 }

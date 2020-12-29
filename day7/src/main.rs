@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use parser::{endline, fixed, many1, optional, unsigned_number, words};
 
-type BagsMap<'a> = HashMap<&'a str, Vec<(u32, &'a str)>>;
+type BagsMap<'a> = HashMap<&'a str, Vec<(u64, &'a str)>>;
 
-fn parse_bag_line(input: &str) -> Option<((&str, Vec<(u32, &str)>), &str)> {
+fn parse_bag_line(input: &str) -> Option<((&str, Vec<(u64, &str)>), &str)> {
     let (color, input) = words(2, input)?;
     let (_, input) = fixed(" bags contain ", input)?;
     let (contains, input) = parse_contained_bags(input)?;
@@ -12,7 +12,7 @@ fn parse_bag_line(input: &str) -> Option<((&str, Vec<(u32, &str)>), &str)> {
     Some(((color, contains), input))
 }
 
-fn parse_contained_bags(mut input: &str) -> Option<(Vec<(u32, &str)>, &str)> {
+fn parse_contained_bags(mut input: &str) -> Option<(Vec<(u64, &str)>, &str)> {
     let bags = if let Some((_, rest)) = fixed("no other bags", input) {
         input = rest;
         vec![]
@@ -25,7 +25,7 @@ fn parse_contained_bags(mut input: &str) -> Option<(Vec<(u32, &str)>, &str)> {
     Some((bags, input))
 }
 
-fn parse_contained_bag(input: &str) -> Option<((u32, &str), &str)> {
+fn parse_contained_bag(input: &str) -> Option<((u64, &str), &str)> {
     let (amount, input) = unsigned_number(input)?;
     let (_, input) = fixed(" ", input)?;
     let (color, input) = words(2, input)?;
@@ -37,7 +37,7 @@ fn parse_contained_bag(input: &str) -> Option<((u32, &str), &str)> {
 
 fn contains_bag_color<'a>(
     target_color: &str,
-    contents: &[(u32, &'a str)],
+    contents: &[(u64, &'a str)],
     map: &'a BagsMap,
 ) -> bool {
     for (_, color) in contents {
@@ -50,7 +50,7 @@ fn contains_bag_color<'a>(
     false
 }
 
-fn count_bags_inside<'a>(contents: &[(u32, &'a str)], map: &'a BagsMap) -> u32 {
+fn count_bags_inside<'a>(contents: &[(u64, &'a str)], map: &'a BagsMap) -> u64 {
     let mut total_count = 0;
     for (count, color) in contents {
         total_count += count;

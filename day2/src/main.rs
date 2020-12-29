@@ -4,7 +4,7 @@ use parser::{fixed, take, take_while, take_while1, unsigned_number};
 
 #[derive(Debug, PartialEq)]
 struct Policy {
-    min_max: RangeInclusive<u32>,
+    min_max: RangeInclusive<u64>,
     character: char,
     password: String,
 }
@@ -16,7 +16,7 @@ impl Policy {
             .chars()
             .filter(|c| *c == self.character)
             .count();
-        self.min_max.contains(&(char_count as u32))
+        self.min_max.contains(&(char_count as u64))
     }
 
     fn validate_2(&self) -> bool {
