@@ -139,7 +139,7 @@ pub fn recognize<'a, O>(parser: impl Parser<O, &'a str>, input: &'a str) -> Opti
     Some((&input[..offset], rest))
 }
 
-fn eof(input: &str) -> Option<(&str, &str)> {
+pub fn eof(input: &str) -> Option<(&str, &str)> {
     if input.is_empty() {
         Some(("", input))
     } else {
@@ -154,6 +154,24 @@ pub fn endline_terminated<'a, O>(
     let (res, input) = parser.parse(input)?;
     let (_, input) = either(endline, eof, input)?;
     Some((res, input))
+}
+
+#[macro_export]
+macro_rules! make_parser {
+    ($parser:ident, $($arg:expr),*) => {
+        move |inp| $parser($($arg,)* inp)
+    }
+}
+
+#[macro_export]
+macro_rules! any {
+    ($parser_1:expr, $parser_2:expr, $($parser_n:expr),*) => {
+        {
+            let parser = make_parser!(either, $parser_1, $parser_2);
+            $(let parser = make_parser!(either, parser, $parser_n);)*
+            parser
+        }
+    }
 }
 
 #[cfg(test)]
@@ -417,5 +435,31 @@ mod test {
         let input = "abc";
         let res = endline_terminated(|inp| fixed("abc", inp), input);
         assert_eq!(res, Some(("abc", "")));
+    }
+
+    #[test]
+    fn make_parser_fixed() {
+        let parser = make_parser!(fixed, "abc");
+        let res = parser("abcd");
+        assert_eq!(res, Some(("abc", "d")));
+    }
+
+    #[test]
+    fn make_parser_match_n() {
+        let parser = make_parser!(match_n, |c| c == 'a', 3);
+        let res = parser("aaaab");
+        assert_eq!(res, Some(("aaa", "ab")));
+    }
+
+    #[test]
+    fn any_fixed() {
+        let parser1 = make_parser!(fixed, "a");
+        let parser2 = make_parser!(fixed, "b");
+        let parser3 = make_parser!(fixed, "c");
+        let any_parser = any!(parser1, parser2, parser3);
+        assert_eq!(any_parser("a "), Some(("a", " ")));
+        assert_eq!(any_parser("b "), Some(("b", " ")));
+        assert_eq!(any_parser("c "), Some(("c", " ")));
+        assert!(any_parser("d ").is_none());
     }
 }
