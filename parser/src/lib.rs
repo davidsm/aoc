@@ -158,7 +158,7 @@ pub fn endline_terminated<'a, O>(
 
 #[macro_export]
 macro_rules! make_parser {
-    ($parser:ident, $($arg:expr),*) => {
+    ($parser:path, $($arg:expr),*) => {
         move |inp| $parser($($arg,)* inp)
     }
 }
@@ -167,8 +167,8 @@ macro_rules! make_parser {
 macro_rules! any {
     ($parser_1:expr, $parser_2:expr, $($parser_n:expr),*) => {
         {
-            let parser = make_parser!(either, $parser_1, $parser_2);
-            $(let parser = make_parser!(either, parser, $parser_n);)*
+            let parser = $crate::make_parser!($crate::either, $parser_1, $parser_2);
+            $(let parser = $crate::make_parser!($crate::either, parser, $parser_n);)*
             parser
         }
     }
